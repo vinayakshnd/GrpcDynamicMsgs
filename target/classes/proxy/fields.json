@@ -1,0 +1,161 @@
+[
+  {
+    "type": "post",
+    "url": "/echo",
+    "title": "Echo Request",
+    "name": "Echo",
+    "parameter": {
+      "fields": {
+        "Parameter": [
+          {
+            "group": "Parameter",
+            "type": "string",
+            "optional": false,
+            "field": "stringValue",
+            "description": ""
+          },
+          {
+            "group": "Parameter",
+            "type": "int32",
+            "optional": false,
+            "field": "intValue",
+            "description": ""
+          },
+          {
+            "group": "Parameter",
+            "type": "int64",
+            "optional": false,
+            "field": "longValue",
+            "description": ""
+          },
+          {
+            "group": "Parameter",
+            "type": "uint32",
+            "optional": false,
+            "field": "uintValue",
+            "description": ""
+          },
+          {
+            "group": "Parameter",
+            "type": "uint64",
+            "optional": false,
+            "field": "ulongValue",
+            "description": ""
+          },
+          {
+            "group": "Parameter",
+            "type": "sint32",
+            "optional": false,
+            "field": "signedIntValue",
+            "description": ""
+          },
+          {
+            "group": "Parameter",
+            "type": "sint64",
+            "optional": false,
+            "field": "signedLongValue",
+            "description": ""
+          },
+          {
+            "group": "Parameter",
+            "type": "fixed32",
+            "optional": false,
+            "field": "fixedIntValue",
+            "description": ""
+          },
+          {
+            "group": "Parameter",
+            "type": "fixed64",
+            "optional": false,
+            "field": "fixedLongValue",
+            "description": ""
+          },
+          {
+            "group": "Parameter",
+            "type": "bool",
+            "optional": false,
+            "field": "boolValue",
+            "description": ""
+          },
+          {
+            "group": "Parameter",
+            "type": "bytes",
+            "optional": false,
+            "field": "bytesValue",
+            "description": ""
+          },
+          {
+            "group": "Parameter",
+            "type": "string",
+            "allowedValues": [
+              "\"NOT_SET\"",
+              "\"SET\"",
+              "\"COOL_VALUE\""
+            ],
+            "optional": false,
+            "field": "enumValue",
+            "description": ""
+          },
+          {
+            "group": "Parameter",
+            "type": "string[]",
+            "optional": false,
+            "field": "arrayvalue",
+            "description": ""
+          },
+          {
+            "group": "Parameter",
+            "type": "float",
+            "optional": false,
+            "field": "floatValue",
+            "description": ""
+          },
+          {
+            "group": "Parameter",
+            "type": "double",
+            "optional": false,
+            "field": "doubleValue",
+            "description": ""
+          },
+          {
+            "group": "Parameter",
+            "type": "int32[]",
+            "optional": false,
+            "field": "arrayIntValue",
+            "description": ""
+          }
+        ]
+      }
+    },
+    "success": {
+      "fields": {
+        "Success_200": [
+          {
+            "group": "Success_200",
+            "type": "bool",
+            "optional": false,
+            "field": "success",
+            "description": ""
+          } 
+        ]
+      }
+    },
+    "error": {
+      "fields": {
+        "Error_400": [
+          {
+            "group": "Error_400",
+            "type": "bool",
+            "optional": false,
+            "field": "error",
+            "description": ""
+          } 
+        ]
+      }
+    },
+    "version": "0.0.0",
+    "filename": "KintoHub.AuthBlock/AuthService.cs",
+    "group": "C__Users_Owner_Documents_Workspace_auth_block_KintoHub_AuthBlock_AuthService_cs",
+    "groupTitle": "C__Users_Owner_Documents_Workspace_auth_block_KintoHub_AuthBlock_AuthService_cs"
+  }
+]
