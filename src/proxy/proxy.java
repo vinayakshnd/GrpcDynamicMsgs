@@ -4,16 +4,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Map.Entry;
-
-import org.json.*;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 
 import com.github.os72.protobuf.dynamic.DynamicSchema;
+import com.github.os72.protobuf.dynamic.EnumDefinition;
 import com.github.os72.protobuf.dynamic.MessageDefinition;
 import com.github.os72.protobuf.dynamic.MessageDefinition.Builder;
 import com.google.protobuf.Descriptors.DescriptorValidationException;
@@ -73,14 +69,14 @@ class proxy{
 		return messageDefinitionMap;	
 	}
 	
-	public static void getRequestParam(JSONObject endpointJson, DynamicSchema.Builder schemaBuilder, String filename, HashMap<String,MessageDefinition> messageDefinitionMap) throws DescriptorValidationException{
+	private static void getRequestParam(JSONObject endpointJson, DynamicSchema.Builder schemaBuilder, String filename, HashMap<String,MessageDefinition> messageDefinitionMap) throws DescriptorValidationException{
 	
 		String endpointName = (String) endpointJson.get("name");
 		JSONObject parameter = (JSONObject)endpointJson.get("parameter");
 		JSONObject fields = (JSONObject)parameter.get("fields");
 		JSONArray paramList = (JSONArray)fields.get("Parameter");
 		
-		Builder builder = MessageDefinition.newBuilder(endpointName + "_parameter");
+		Builder builder = MessageDefinition.newBuilder(endpointName + "_request");
 		
 		MessageDefinition msgDef = getParams(builder, paramList);
 		schemaBuilder.addMessageDefinition(msgDef);
@@ -90,7 +86,7 @@ class proxy{
 	}
 
 	
-	public static void getSuccessParam(JSONObject endpointJson, DynamicSchema.Builder schemaBuilder, String filename, HashMap<String,MessageDefinition> messageDefinitionMap) throws DescriptorValidationException{
+	private static void getSuccessParam(JSONObject endpointJson, DynamicSchema.Builder schemaBuilder, String filename, HashMap<String,MessageDefinition> messageDefinitionMap) throws DescriptorValidationException{
 		
 		String endpointName = (String) endpointJson.get("name");
 		JSONObject success = (JSONObject)endpointJson.get("success");
@@ -106,7 +102,7 @@ class proxy{
 		messageDefinitionMap.put(key, msgDef);
 	}
 	
-	public static void getErrorParam(JSONObject endpointJson, DynamicSchema.Builder schemaBuilder, String filename, HashMap<String,MessageDefinition> messageDefinitionMap) throws DescriptorValidationException{
+	private static void getErrorParam(JSONObject endpointJson, DynamicSchema.Builder schemaBuilder, String filename, HashMap<String,MessageDefinition> messageDefinitionMap) throws DescriptorValidationException{
 		
 		String endpointName = (String) endpointJson.get("name");
 		JSONObject success = (JSONObject)endpointJson.get("error");
@@ -122,37 +118,125 @@ class proxy{
 		messageDefinitionMap.put(key, msgDef);
 	}
 	
-	public static MessageDefinition getParams(Builder builder, JSONArray paramArray){
+	private static MessageDefinition getParams(Builder builder, JSONArray paramArray){
 		int i = 1;
-		for (Object p : paramArray) {
+		
+		for (Object p: paramArray) {
 			JSONObject param = (JSONObject) p;
 			String name = (String) param.get("field");
 			String type = (String) param.get("type");
 			
-			boolean optional = (Boolean) param.get("optional");
-			boolean required = !optional;
-			String label;
-			if (required == true) {
-				label = "required";
-			}else{
-				label = "optional";
+			if (param.containsKey("allowedValues")){
+				// if param is of type enum
+				EnumDefinition enumDef = getEnumDefinition(param);
+				builder.addEnumDefinition(enumDef);
+				
+			} else if (type.equals("object")){
+				MessageDefinition.Builder msgBuilder = MessageDefinition.newBuilder(name);
+				MessageDefinition msgDefinition = getMessageDefinition(param, paramArray, msgBuilder);
+				builder.addMessageDefinition(msgDefinition);
+				
+			} else {
+				// If param is scalar data type
+				boolean optional = (Boolean) param.get("optional");
+				boolean required = !optional;
+				String label;
+				if (required == true) {
+					label = "required";
+				}else{
+					label = "optional";
+				}
+				
+				// There seems to be only one way to specify 
+				// if dataType is array (`repeated` in gRPC terms), ie. through label.
+				// label is `DescriptorProtos.FieldDescriptorProto.Label` enum
+				// and can take only one of the value :optional, required, repeated.
+				if (type.contains("[]")){
+					type = type.replace("[]", "");
+					label = "repeated";
+				}
+							
+				builder.addField(label, type, name, i);
+				i++;
 			}
-			
-			// There seems to be only one way to specify 
-			// if dataType is array (`repeated` in gRPC terms), ie. through label.
-			// label is `DescriptorProtos.FieldDescriptorProto.Label` enum
-			// and can take only one of the value :optional, required, repeated.
-			if (type.contains("[]")){
-				type = type.replace("[]", "");
-				label = "repeated";
-			}
-						
-			builder.addField(label, type, name, i);
-			i++;
 		}
 		
 		MessageDefinition msgDef = builder.build();
 		return msgDef;
+	}
+	
+	private static EnumDefinition getEnumDefinition(JSONObject param) {
+		
+		String enumName = (String) param.get("field");
+		JSONArray allowedValues = (JSONArray) param.get("allowedValues");
+		
+		EnumDefinition.Builder enumBuilder = EnumDefinition.newBuilder(enumName);
+		
+		int i=1;
+		for (Object value: allowedValues){
+			String stringValue = (String)value;
+			enumBuilder.addValue(stringValue, i);
+			i++;
+		}
+		return enumBuilder.build();
+	}
+
+	private static MessageDefinition getMessageDefinition(JSONObject param, JSONArray paramArray, MessageDefinition.Builder msgBuilder){
+		
+		String currentParam = (String) param.get("field");
+		JSONArray childParams = findAllChildParams(paramArray, currentParam);
+		
+		int i=1;
+		for(Object childParam: childParams){
+			JSONObject jsonChildParam = (JSONObject) childParam;
+			String type = (String) jsonChildParam.get("type");
+			String name = (String) jsonChildParam.get("field");
+			
+			if(type != "object"){
+
+				// If param is scalar data type
+				boolean optional = (Boolean) param.get("optional");
+				boolean required = !optional;
+				String label;
+				if (required == true) {
+					label = "required";
+				}else{
+					label = "optional";
+				}
+				
+				// There seems to be only one way to specify 
+				// if dataType is array (`repeated` in gRPC terms), ie. through label.
+				// label is `DescriptorProtos.FieldDescriptorProto.Label` enum
+				// and can take only one of the value :optional, required, repeated.
+				if (type.contains("[]")){
+					type = type.replace("[]", "");
+					label = "repeated";
+				}
+							
+				msgBuilder.addField(label, type, name, i);
+				i++;
+			}else{
+				MessageDefinition.Builder childMsgBuilder = MessageDefinition.newBuilder(name);
+				MessageDefinition childMsgDefinition = getMessageDefinition(jsonChildParam, paramArray, childMsgBuilder);
+				msgBuilder.addMessageDefinition(childMsgDefinition);
+			}
+		}
+		return msgBuilder.build();
+	}
+	
+	private static JSONArray findAllChildParams(JSONArray paramArray, String parentName){
+		
+		JSONArray childParams = new JSONArray();
+		
+		for (Object param: paramArray) {
+			
+			JSONObject jsonParam = (JSONObject) param;
+			String paramName = (String)jsonParam.get("field");
+			if(paramName.startsWith(parentName) && !paramName.equalsIgnoreCase(parentName)){
+				childParams.add(jsonParam);
+			}
+		}
+		return childParams;
 	}
 	
 	public static void main(String []args){
